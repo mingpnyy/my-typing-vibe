@@ -1,1 +1,0 @@
-# my-typing-vibe
