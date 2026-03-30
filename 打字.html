@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極簡打字練習 - Minimalist Typing Tutor</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            --accent: #bb86fc;
+            --success: #4caf50;
+            --error: #cf6679;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .quote-display {
+            font-size: 1.8rem;
+            line-height: 1.5;
+            margin-bottom: 2rem;
+            min-height: 100px;
+            user-select: none;
+            transition: color 0.3s ease;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 1.2rem;
+            font-size: 1.5rem;
+            background: #2a2a2a;
+            border: 3px solid transparent;
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        /* 狀態顏色 */
+        .input-correct {
+            border-color: var(--success);
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        .input-wrong {
+            border-color: var(--error);
+            background-color: rgba(207, 102, 121, 0.1);
+        }
+
+        .btn-restart {
+            margin-top: 2rem;
+            background: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-restart:hover {
+            color: white;
+            border-color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="stats-bar">
+        <span>WPM: <span id="wpm">0</span></span>
+        <span>正確率: <span id="accuracy">100</span>%</span>
+    </div>
+
+    <div class="quote-display" id="quote">載入中...</div>
+
+    <input type="text" 
+           id="input" 
+           class="input-field" 
+           placeholder="在此開始打字..." 
+           autocomplete="off"
+           autofocus>
+
+    <button class="btn-restart" onclick="initGame()">重新開始</button>
+</div>
+
+<script>
+    const quotes = [
+        "The quick brown fox jumps over the lazy dog.",
+        "Success is not final, failure is not fatal.",
+        "Stay hungry, stay foolish.",
+        "Believe you can and you're halfway there.",
+        "Code is like humor. When you have to explain it, it's bad.",
+        "Simplicity is the ultimate sophistication.",
+        "Your time is limited, so don't waste it living someone else's life.",
+        "Focus on being productive instead of busy."
+    ];
+
+    let startTime;
+    let errors = 0;
+    let totalChars = 0;
+    let timerStarted = false;
+    let currentQuote = "";
+
+    const quoteDisplay = document.getElementById('quote');
+    const inputField = document.getElementById('input');
+    const wpmDisplay = document.getElementById('wpm');
+    const accuracyDisplay = document.getElementById('accuracy');
+
+    function initGame() {
+        // 重置數據
+        currentQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        quoteDisplay.innerText = currentQuote;
+        inputField.value = "";
+        inputField.className = "input-field";
+        errors = 0;
+        totalChars = 0;
+        timerStarted = false;
+        wpmDisplay.innerText = "0";
+        accuracyDisplay.innerText = "100";
+        inputField.focus();
+    }
+
+    inputField.addEventListener('input', () => {
+        const value = inputField.value;
+        const arrayQuote = currentQuote.split('');
+        const arrayValue = value.split('');
+
+        // 啟動計時器
+        if (!timerStarted && value.length > 0) {
+            startTime = new Date();
+            timerStarted = true;
+        }
+
+        let isCorrect = true;
+        
+        // 檢查正確性並改變樣式
+        if (value === currentQuote.substring(0, value.length)) {
+            inputField.classList.remove('input-wrong');
+            inputField.classList.add('input-correct');
+        } else {
+            inputField.classList.remove('input-correct');
+            inputField.classList.add('input-wrong');
+            isCorrect = false;
+            errors++; // 簡單錯誤計數
+        }
+
+        // 計算 WPM & 正確率
+        if (value.length > 0) {
+            const timeElapsed = (new Date() - startTime) / 60000; // 分鐘
+            const wordsTyped = value.length / 5;
+            const wpm = Math.round(wordsTyped / timeElapsed);
+            wpmDisplay.innerText = wpm > 0 && isFinite(wpm) ? wpm : 0;
+
+            const accuracy = Math.round(((value.length - getMismatchCount(value, currentQuote)) / value.length) * 100);
+            accuracyDisplay.innerText = accuracy < 0 ? 0 : accuracy;
+        }
+
+        // 完成判斷
+        if (value === currentQuote) {
+            setTimeout(initGame, 500); // 延遲一下進入下一題
+        }
+    });
+
+    function getMismatchCount(input, original) {
+        let count = 0;
+        for(let i=0; i<input.length; i++) {
+            if(input[i] !== original[i]) count++;
+        }
+        return count;
+    }
+
+    // 初始化
+    initGame();
+</script>
+
+</body>
+</html>
