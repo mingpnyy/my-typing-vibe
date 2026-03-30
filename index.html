@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可愛打地鼠</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #E0F2F1; /* 薄荷綠背景 */
+            color: #4CAF50; /* 深綠色文字 */
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #8D6E63; /* 咖啡色標題 */
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #game-info {
+            display: flex;
+            justify-content: space-around;
+            width: 300px;
+            margin-bottom: 30px;
+            font-size: 1.5em;
+            color: #8D6E63; /* 咖啡色資訊 */
+            background-color: #B2DFDB; /* 淺薄荷綠底 */
+            padding: 10px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 15px;
+            background-color: #795548; /* 深咖啡色木板 */
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .hole {
+            width: 100px;
+            height: 100px;
+            background-color: #D7CCC8; /* 淺咖啡色洞口 */
+            border-radius: 50%;
+            display: flex;
+            align-items: flex-end; /* 地鼠從底部升起 */
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            border: 5px solid #A1887F; /* 洞口邊框 */
+            box-sizing: border-box;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .mole {
+            width: 80px;
+            height: 80px;
+            background-color: #4CAF50; /* 綠色地鼠 */
+            border-radius: 50%;
+            position: absolute;
+            bottom: -80px; /* 初始在地洞下方 */
+            transition: bottom 0.2s ease-out;
+            pointer-events: none; /* 避免在地鼠上升時點擊到下方地洞 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: white;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        .mole.up {
+            bottom: 0px; /* 地鼠升起 */
+            pointer-events: auto; /* 地鼠升起後可點擊 */
+        }
+
+        .mole.hit {
+            background-color: #FF7043; /* 點擊後變色 */
+            transform: scale(0.8); /* 點擊後稍微縮小 */
+            transition: all 0.1s ease-out;
+        }
+
+        #start-button {
+            padding: 15px 30px;
+            font-size: 1.8em;
+            margin-top: 30px;
+            background-color: #4CAF50; /* 啟動按鈕 */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        #start-button:hover {
+            background-color: #66BB6A;
+            transform: translateY(-2px);
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            text-align: center;
+            z-index: 100;
+            border-radius: 20px;
+            display: none; /* 預設隱藏 */
+        }
+
+        #game-over-screen button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #FFC107;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            transition: background-color 0.3s ease;
+        }
+
+        #game-over-screen button:hover {
+            background-color: #FFD54F;
+        }
+    </style>
+</head>
+<body>
+    <h1>可愛打地鼠</h1>
+
+    <div id="game-info">
+        <div id="score">分數: 0</div>
+        <div id="time-left">時間: 30</div>
+    </div>
+
+    <div id="game-board">
+        </div>
+
+    <button id="start-button">開始遊戲</button>
+
+    <div id="game-over-screen">
+        <h2>遊戲結束！</h2>
+        <p>你的分數是: <span id="final-score">0</span></p>
+        <button id="restart-button">再玩一次</button>
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score');
+        const timeLeftDisplay = document.getElementById('time-left');
+        const startButton = document.getElementById('start-button');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+
+        let score = 0;
+        let timeLeft = 30;
+        let timerId = null;
+        let moleTimerId = null;
+        let lastHole = null;
+        const holes = []; // 用來存放地洞元素
+
+        // 動態生成 9 個地洞
+        for (let i = 0; i < 9; i++) {
+            const hole = document.createElement('div');
+            hole.classList.add('hole');
+            const mole = document.createElement('div');
+            mole.classList.add('mole');
+            hole.appendChild(mole);
+            gameBoard.appendChild(hole);
+            holes.push(hole);
+        }
+
+        // 選擇一個隨機地洞
+        function randomHole() {
+            const index = Math.floor(Math.random() * holes.length);
+            const hole = holes[index];
+            if (hole === lastHole) { // 避免連續兩次同一個洞
+                return randomHole();
+            }
+            lastHole = hole;
+            return hole;
+        }
+
+        // 地鼠跳出
+        function popUpMole() {
+            holes.forEach(hole => {
+                hole.querySelector('.mole').classList.remove('up', 'hit');
+            });
+
+            let randomMoleHole = randomHole();
+            let mole = randomMoleHole.querySelector('.mole');
+            mole.classList.add('up');
+
+            // 設定地鼠顯示時間
+            let popUpTime = Math.random() * 800 + 400; // 0.4s 到 1.2s
+            moleTimerId = setTimeout(() => {
+                mole.classList.remove('up');
+                if (timeLeft > 0) { // 遊戲未結束才繼續跳出
+                    popUpMole();
+                }
+            }, popUpTime);
+        }
+
+        // 點擊地鼠
+        holes.forEach(hole => {
+            hole.addEventListener('click', (e) => {
+                const clickedMole = e.target.closest('.mole');
+                if (clickedMole && clickedMole.classList.contains('up')) {
+                    score++;
+                    scoreDisplay.textContent = `分數: ${score}`;
+                    clickedMole.classList.remove('up');
+                    clickedMole.classList.add('hit'); // 給予點擊反饋
+                    clearTimeout(moleTimerId); // 點到後立即重設計時器
+                    if (timeLeft > 0) {
+                         popUpMole();
+                    }
+                }
+            });
+        });
+
+        // 遊戲倒數
+        function countdown() {
+            timeLeft--;
+            timeLeftDisplay.textContent = `時間: ${timeLeft}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                clearTimeout(moleTimerId); // 確保所有地鼠都停止
+                holes.forEach(hole => {
+                    hole.querySelector('.mole').classList.remove('up'); // 所有地鼠收回
+                    hole.querySelector('.mole').pointerEvents = 'none'; // 停止點擊
+                });
+                endGame();
+            }
+        }
+
+        // 遊戲開始
+        function startGame() {
+            score = 0;
+            timeLeft = 30;
+            scoreDisplay.textContent = `分數: ${score}`;
+            timeLeftDisplay.textContent = `時間: ${timeLeft}`;
+            startButton.style.display = 'none'; // 隱藏開始按鈕
+            gameOverScreen.style.display = 'none'; // 隱藏遊戲結束畫面
+
+            timerId = setInterval(countdown, 1000); // 每秒倒數
+            popUpMole(); // 第一隻地鼠跳出
+        }
+
+        // 遊戲結束
+        function endGame() {
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'flex'; // 顯示遊戲結束畫面
+            startButton.style.display = 'block'; // 重新顯示開始按鈕，可作為重新遊戲
+
+            // 將開始按鈕改為「重新開始」功能
+            startButton.textContent = "重新開始";
+            startButton.onclick = startGame; // 將按鈕點擊事件重新指向 startGame
+        }
+
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame); // 遊戲結束後的重新開始按鈕
+
+        // 初始化時隱藏遊戲結束畫面，確保重新載入頁面時是正確狀態
+        gameOverScreen.style.display = 'none';
+    </script>
+</body>
+</html>
