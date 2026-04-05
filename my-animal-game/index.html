@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>動物英文測驗</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  text-align: center;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+}
+
+.active {
+  display: block;
+}
+
+button {
+  padding: 15px 30px;
+  font-size: 18px;
+  border: none;
+  border-radius: 10px;
+  background: #ffcc00;
+  cursor: pointer;
+}
+
+img {
+  width: 250px;
+  border-radius: 20px;
+  margin: 20px;
+}
+
+#reader {
+  width: 300px;
+  margin: auto;
+}
+
+.correct {
+  color: #00ff99;
+  font-size: 24px;
+}
+
+.wrong {
+  color: #ff4444;
+  font-size: 24px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🎮 開始畫面 -->
+<div id="startScreen" class="screen active">
+  <h1>🐾 動物英文測驗</h1>
+  <p>掃描正確的動物卡片！</p>
+  <button onclick="startGame()">開始遊戲</button>
+</div>
+
+<!-- 🎯 遊戲畫面 -->
+<div id="gameScreen" class="screen">
+  <h2 id="question">第 1 題</h2>
+  <img id="animalImg">
+  <div id="reader"></div>
+  <p id="result"></p>
+  <p>分數：<span id="score">0</span></p>
+</div>
+
+<!-- 🎉 結束畫面 -->
+<div id="endScreen" class="screen">
+  <h1>🎉 遊戲結束！</h1>
+  <h2 id="finalScore"></h2>
+  <button onclick="restart()">再玩一次</button>
+</div>
+
+<audio id="correctSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73467.mp3"></audio>
+<audio id="wrongSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_9f1c5a88a3.mp3"></audio>
+
+<script>
+let animals = [1,2,3,4];
+let currentAnswer;
+let score = 0;
+let questionCount = 0;
+let scanner;
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function startGame() {
+  score = 0;
+  questionCount = 0;
+  showScreen("gameScreen");
+
+  if (!scanner) {
+    scanner = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices.length) {
+        scanner.start(
+          devices[0].id,
+          { fps: 10, qrbox: 250 },
+          onScanSuccess
+        );
+      }
+    });
+  }
+
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if (questionCount >= 10) {
+    endGame();
+    return;
+  }
+
+  questionCount++;
+  document.getElementById("question").innerText = `第 ${questionCount} 題`;
+
+  currentAnswer = animals[Math.floor(Math.random()*4)];
+
+  document.getElementById("animalImg").src =
+    `assets/images/${currentAnswer}.png`;
+
+  new Audio(`assets/audio/${currentAnswer}.mp3`).play();
+
+  document.getElementById("result").innerText = "";
+}
+
+function onScanSuccess(decodedText) {
+  if (parseInt(decodedText) === currentAnswer) {
+    document.getElementById("result").innerHTML = "✅ 正確！";
+    document.getElementById("result").className = "correct";
+    document.getElementById("correctSound").play();
+    score++;
+  } else {
+    document.getElementById("result").innerHTML = "❌ 錯誤！";
+    document.getElementById("result").className = "wrong";
+    document.getElementById("wrongSound").play();
+  }
+
+  document.getElementById("score").innerText = score;
+
+  setTimeout(nextQuestion, 1200);
+}
+
+function endGame() {
+  showScreen("endScreen");
+  document.getElementById("finalScore").innerText =
+    `你的分數：${score} / 10`;
+}
+
+function restart() {
+  showScreen("startScreen");
+}
+</script>
+
+</body>
+</html>
