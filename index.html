@@ -1,208 +1,166 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極簡打字練習 - Minimalist Typing Tutor</title>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #888;
-            --accent: #bb86fc;
-            --success: #4caf50;
-            --error: #cf6679;
-        }
+<meta charset="UTF-8">
+<title>動物英文測驗</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  text-align: center;
+}
 
-        .container {
-            width: 90%;
-            max-width: 800px;
-            background: var(--card-bg);
-            padding: 3rem;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            text-align: center;
-        }
+.screen {
+  display: none;
+  padding: 20px;
+}
 
-        .stats-bar {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 2rem;
-            font-size: 1.1rem;
-            color: var(--accent);
-            font-weight: 600;
-        }
+.active {
+  display: block;
+}
 
-        .quote-display {
-            font-size: 1.8rem;
-            line-height: 1.5;
-            margin-bottom: 2rem;
-            min-height: 100px;
-            user-select: none;
-            transition: color 0.3s ease;
-        }
+button {
+  padding: 15px 30px;
+  font-size: 18px;
+  border: none;
+  border-radius: 10px;
+  background: #ffcc00;
+  cursor: pointer;
+}
 
-        .input-field {
-            width: 100%;
-            padding: 1.2rem;
-            font-size: 1.5rem;
-            background: #2a2a2a;
-            border: 3px solid transparent;
-            border-radius: 12px;
-            color: white;
-            outline: none;
-            transition: all 0.2s ease;
-            box-sizing: border-box;
-        }
+img {
+  width: 250px;
+  border-radius: 20px;
+  margin: 20px;
+}
 
-        /* 狀態顏色 */
-        .input-correct {
-            border-color: var(--success);
-            background-color: rgba(76, 175, 80, 0.1);
-        }
+#reader {
+  width: 300px;
+  margin: auto;
+}
 
-        .input-wrong {
-            border-color: var(--error);
-            background-color: rgba(207, 102, 121, 0.1);
-        }
+.correct {
+  color: #00ff99;
+  font-size: 24px;
+}
 
-        .btn-restart {
-            margin-top: 2rem;
-            background: transparent;
-            border: 1px solid var(--text-muted);
-            color: var(--text-muted);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-restart:hover {
-            color: white;
-            border-color: white;
-        }
-    </style>
+.wrong {
+  color: #ff4444;
+  font-size: 24px;
+}
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <div class="stats-bar">
-        <span>WPM: <span id="wpm">0</span></span>
-        <span>正確率: <span id="accuracy">100</span>%</span>
-    </div>
-
-    <div class="quote-display" id="quote">載入中...</div>
-
-    <input type="text" 
-           id="input" 
-           class="input-field" 
-           placeholder="在此開始打字..." 
-           autocomplete="off"
-           autofocus>
-
-    <button class="btn-restart" onclick="initGame()">重新開始</button>
+<!-- 🎮 開始畫面 -->
+<div id="startScreen" class="screen active">
+  <h1>🐾 動物英文測驗</h1>
+  <p>掃描正確的動物卡片！</p>
+  <button onclick="startGame()">開始遊戲</button>
 </div>
 
+<!-- 🎯 遊戲畫面 -->
+<div id="gameScreen" class="screen">
+  <h2 id="question">第 1 題</h2>
+  <img id="animalImg">
+  <div id="reader"></div>
+  <p id="result"></p>
+  <p>分數：<span id="score">0</span></p>
+</div>
+
+<!-- 🎉 結束畫面 -->
+<div id="endScreen" class="screen">
+  <h1>🎉 遊戲結束！</h1>
+  <h2 id="finalScore"></h2>
+  <button onclick="restart()">再玩一次</button>
+</div>
+
+<audio id="correctSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73467.mp3"></audio>
+<audio id="wrongSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_9f1c5a88a3.mp3"></audio>
+
 <script>
-    const quotes = [
-        "The quick brown fox jumps over the lazy dog.",
-        "Success is not final, failure is not fatal.",
-        "Stay hungry, stay foolish.",
-        "Believe you can and you're halfway there.",
-        "Code is like humor. When you have to explain it, it's bad.",
-        "Simplicity is the ultimate sophistication.",
-        "Your time is limited, so don't waste it living someone else's life.",
-        "Focus on being productive instead of busy."
-    ];
+let animals = [1,2,3,4];
+let currentAnswer;
+let score = 0;
+let questionCount = 0;
+let scanner;
 
-    let startTime;
-    let errors = 0;
-    let totalChars = 0;
-    let timerStarted = false;
-    let currentQuote = "";
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
 
-    const quoteDisplay = document.getElementById('quote');
-    const inputField = document.getElementById('input');
-    const wpmDisplay = document.getElementById('wpm');
-    const accuracyDisplay = document.getElementById('accuracy');
+function startGame() {
+  score = 0;
+  questionCount = 0;
+  showScreen("gameScreen");
 
-    function initGame() {
-        // 重置數據
-        currentQuote = quotes[Math.floor(Math.random() * quotes.length)];
-        quoteDisplay.innerText = currentQuote;
-        inputField.value = "";
-        inputField.className = "input-field";
-        errors = 0;
-        totalChars = 0;
-        timerStarted = false;
-        wpmDisplay.innerText = "0";
-        accuracyDisplay.innerText = "100";
-        inputField.focus();
-    }
-
-    inputField.addEventListener('input', () => {
-        const value = inputField.value;
-        const arrayQuote = currentQuote.split('');
-        const arrayValue = value.split('');
-
-        // 啟動計時器
-        if (!timerStarted && value.length > 0) {
-            startTime = new Date();
-            timerStarted = true;
-        }
-
-        let isCorrect = true;
-        
-        // 檢查正確性並改變樣式
-        if (value === currentQuote.substring(0, value.length)) {
-            inputField.classList.remove('input-wrong');
-            inputField.classList.add('input-correct');
-        } else {
-            inputField.classList.remove('input-correct');
-            inputField.classList.add('input-wrong');
-            isCorrect = false;
-            errors++; // 簡單錯誤計數
-        }
-
-        // 計算 WPM & 正確率
-        if (value.length > 0) {
-            const timeElapsed = (new Date() - startTime) / 60000; // 分鐘
-            const wordsTyped = value.length / 5;
-            const wpm = Math.round(wordsTyped / timeElapsed);
-            wpmDisplay.innerText = wpm > 0 && isFinite(wpm) ? wpm : 0;
-
-            const accuracy = Math.round(((value.length - getMismatchCount(value, currentQuote)) / value.length) * 100);
-            accuracyDisplay.innerText = accuracy < 0 ? 0 : accuracy;
-        }
-
-        // 完成判斷
-        if (value === currentQuote) {
-            setTimeout(initGame, 500); // 延遲一下進入下一題
-        }
+  if (!scanner) {
+    scanner = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices.length) {
+        scanner.start(
+          devices[0].id,
+          { fps: 10, qrbox: 250 },
+          onScanSuccess
+        );
+      }
     });
+  }
 
-    function getMismatchCount(input, original) {
-        let count = 0;
-        for(let i=0; i<input.length; i++) {
-            if(input[i] !== original[i]) count++;
-        }
-        return count;
-    }
+  nextQuestion();
+}
 
-    // 初始化
-    initGame();
+function nextQuestion() {
+  if (questionCount >= 10) {
+    endGame();
+    return;
+  }
+
+  questionCount++;
+  document.getElementById("question").innerText = `第 ${questionCount} 題`;
+
+  currentAnswer = animals[Math.floor(Math.random()*4)];
+
+  document.getElementById("animalImg").src =
+    `assets/images/${currentAnswer}.png`;
+
+  new Audio(`assets/audio/${currentAnswer}.mp3`).play();
+
+  document.getElementById("result").innerText = "";
+}
+
+function onScanSuccess(decodedText) {
+  if (parseInt(decodedText) === currentAnswer) {
+    document.getElementById("result").innerHTML = "✅ 正確！";
+    document.getElementById("result").className = "correct";
+    document.getElementById("correctSound").play();
+    score++;
+  } else {
+    document.getElementById("result").innerHTML = "❌ 錯誤！";
+    document.getElementById("result").className = "wrong";
+    document.getElementById("wrongSound").play();
+  }
+
+  document.getElementById("score").innerText = score;
+
+  setTimeout(nextQuestion, 1200);
+}
+
+function endGame() {
+  showScreen("endScreen");
+  document.getElementById("finalScore").innerText =
+    `你的分數：${score} / 10`;
+}
+
+function restart() {
+  showScreen("startScreen");
+}
 </script>
 
 </body>
